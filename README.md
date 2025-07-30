@@ -27,7 +27,8 @@ chmod +x setup-kong.sh
 ### 3. Add Host Entry
 
 Add this line to your `/etc/hosts` file:
-```
+
+```text
 127.0.0.1 api.local
 ```
 
@@ -56,6 +57,7 @@ curl -H "Host: api.local" -H "Authorization: Bearer YOUR_JWT_TOKEN" http://local
 ## JWT Configuration
 
 The setup includes:
+
 - **Algorithm**: HS256
 - **Issuer**: Kong consumer key
 - **Claims**: Standard JWT claims (iss, exp, iat, sub)
@@ -64,6 +66,7 @@ The setup includes:
 ## Manual Configuration Examples
 
 ### Create a Service
+
 ```bash
 curl -i -X POST http://localhost:8001/services/ \
   --data "name=my-service" \
@@ -71,6 +74,7 @@ curl -i -X POST http://localhost:8001/services/ \
 ```
 
 ### Create a Route
+
 ```bash
 curl -i -X POST http://localhost:8001/services/my-service/routes \
   --data "hosts[]=api.example.com" \
@@ -78,6 +82,7 @@ curl -i -X POST http://localhost:8001/services/my-service/routes \
 ```
 
 ### Enable JWT Plugin
+
 ```bash
 curl -i -X POST http://localhost:8001/services/my-service/plugins \
   --data "name=jwt" \
@@ -86,6 +91,7 @@ curl -i -X POST http://localhost:8001/services/my-service/plugins \
 ```
 
 ### Create Consumer and JWT Credentials
+
 ```bash
 # Create consumer
 curl -i -X POST http://localhost:8001/consumers/ \
@@ -100,6 +106,7 @@ curl -i -X POST http://localhost:8001/consumers/api-user/jwt \
 ## Generating JWT Tokens
 
 ### Using Python
+
 ```python
 import jwt
 from datetime import datetime, timedelta
@@ -116,6 +123,7 @@ token = jwt.encode(payload, 'your-kong-secret', algorithm='HS256')
 ```
 
 ### Using Node.js
+
 ```javascript
 const jwt = require('jsonwebtoken');
 
@@ -133,6 +141,7 @@ const token = jwt.sign(payload, 'your-kong-secret', { algorithm: 'HS256' });
 ## Common Kong Plugins for API Security
 
 ### Rate Limiting
+
 ```bash
 curl -i -X POST http://localhost:8001/services/my-service/plugins \
   --data "name=rate-limiting" \
@@ -141,6 +150,7 @@ curl -i -X POST http://localhost:8001/services/my-service/plugins \
 ```
 
 ### CORS
+
 ```bash
 curl -i -X POST http://localhost:8001/services/my-service/plugins \
   --data "name=cors" \
@@ -150,6 +160,7 @@ curl -i -X POST http://localhost:8001/services/my-service/plugins \
 ```
 
 ### Request Size Limiting
+
 ```bash
 curl -i -X POST http://localhost:8001/services/my-service/plugins \
   --data "name=request-size-limiting" \
@@ -169,26 +180,31 @@ docker-compose down -v
 ## Troubleshooting
 
 ### Check Kong Status
+
 ```bash
 curl http://localhost:8001/status
 ```
 
 ### View Kong Logs
+
 ```bash
 docker-compose logs kong
 ```
 
 ### List All Services
+
 ```bash
 curl http://localhost:8001/services
 ```
 
 ### List All Routes
+
 ```bash
 curl http://localhost:8001/routes
 ```
 
 ### List All Consumers
+
 ```bash
 curl http://localhost:8001/consumers
 ```

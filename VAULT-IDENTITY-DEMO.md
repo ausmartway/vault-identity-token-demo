@@ -13,6 +13,7 @@ This demo shows the complete flow of using HashiCorp Vault identity tokens with 
 ## 🚀 Quick Start
 
 ### 1. Start the Services
+
 ```bash
 # Start Vault + Kong stack
 docker compose -f docker-compose-with-vault.yml up -d
@@ -21,18 +22,22 @@ docker compose -f docker-compose-with-vault.yml up -d
 ```
 
 ### 2. Setup the Demo
+
 ```bash
 # Configure Vault identity tokens and Kong JWT validation
 ./setup-vault-identity.sh
 ```
 
 ### 3. Add Host Entry
+
 Add this to your `/etc/hosts` file:
-```
+
+```text
 127.0.0.1 vault-demo.local
 ```
 
 ### 4. Run the Demo
+
 ```bash
 # Execute the complete identity token flow
 ./vault-identity-demo.sh
@@ -41,25 +46,29 @@ Add this to your `/etc/hosts` file:
 ## 🔍 What Happens in the Demo
 
 ### Step 1: Vault Authentication
+
 - Script logs into Vault using username: `demouser`, password: `password123`
 - Vault returns a client token
 
 ### Step 2: Get Identity Token
+
 - Script requests Vault identity token using the client token
 - Vault issues a signed JWT identity token with user metadata
 
 ### Step 3: Test Kong API
+
 - Script calls Kong API with the Vault identity token
 - Kong validates the token using Vault's public key
 - Kong forwards the request to backend service
 
 ### Step 4: Verify Response
+
 - Backend receives the request with user context headers added by Kong
 - Response shows successful authentication and authorization
 
 ## 🔐 Security Flow
 
-```
+```text
 User → Vault (login) → Vault Identity Token → Kong (validate) → Backend
 ```
 

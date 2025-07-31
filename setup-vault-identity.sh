@@ -129,6 +129,8 @@ curl -i -X POST http://localhost:8001/consumers/vault-identity/jwt \
   --data "key=http://vault.local:8200/v1/identity/oidc" \
   --data-urlencode "rsa_public_key@vault-public.pem" > /dev/null
 
+KONG_JWT_ID=$(curl -s http://localhost:8001/consumers/vault-identity/jwt | jq -r '.data[0].id') && curl -X PATCH http://localhost:8001/consumers/vault-identity/jwt/$KONG_JWT_ID --data-urlencode "rsa_public_key@vault-public.pem"
+
 echo "Added Vault public key to Kong consumer"
 
 # Enable JWT plugin

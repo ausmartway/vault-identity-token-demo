@@ -1,6 +1,5 @@
 # Temporary cryptographic keys
-vault-public.pem
-vault-public-new.pem
+vault-public*.pem
 
 # Docker volumes and data
 .vault/

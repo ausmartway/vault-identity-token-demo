@@ -68,14 +68,32 @@ echo "Identity token: ${IDENTITY_TOKEN:0:50}..."
 # Decode and show the token payload
 echo ""
 echo "🔍 Token payload (decoded):"
-echo $IDENTITY_TOKEN | cut -d'.' -f2 | base64 -d 2>/dev/null | jq . || echo "Could not decode token payload"
+# Use Python for proper base64 decoding with padding handling
+python3 -c "
+import base64
+import json
+import sys
+
+try:
+    token = '$IDENTITY_TOKEN'
+    payload = token.split('.')[1]
+    # Add padding if needed
+    missing_padding = len(payload) % 4
+    if missing_padding:
+        payload += '=' * (4 - missing_padding)
+    decoded = base64.b64decode(payload)
+    parsed = json.loads(decoded)
+    print(json.dumps(parsed, indent=2))
+except Exception as e:
+    print('Could not decode token payload:', str(e))
+" 2>/dev/null || echo "Could not decode token payload"
 
 # Step 3: Test API without token (should fail)
 echo ""
 echo "🧪 Step 3: Testing Kong API without token (should fail)..."
 
 RESPONSE_NO_TOKEN=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
-    -H "Host: vault-demo.local" \
+    -H "Host: vault.local" \
     http://localhost:8000/api/get)
 
 STATUS_NO_TOKEN=$(echo "$RESPONSE_NO_TOKEN" | grep "HTTP_STATUS:" | cut -d: -f2)
@@ -91,7 +109,7 @@ echo ""
 echo "🚀 Step 4: Testing Kong API with Vault identity token..."
 
 RESPONSE_WITH_TOKEN=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
-    -H "Host: vault-demo.local" \
+    -H "Host: vault.local" \
     -H "Authorization: Bearer $IDENTITY_TOKEN" \
     http://localhost:8000/api/get)
 
@@ -124,7 +142,7 @@ if [ "$STATUS_WITH_TOKEN" = "200" ]; then
     echo "Testing POST /api/post..."
     POST_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
         -X POST \
-        -H "Host: vault-demo.local" \
+        -H "Host: vault.local" \
         -H "Authorization: Bearer $IDENTITY_TOKEN" \
         -H "Content-Type: application/json" \
         -d '{"message": "Hello from Vault identity token!", "user": "demouser"}' \
@@ -141,7 +159,7 @@ if [ "$STATUS_WITH_TOKEN" = "200" ]; then
     # Test headers endpoint
     echo "Testing GET /api/headers..."
     HEADERS_RESPONSE=$(curl -s \
-        -H "Host: vault-demo.local" \
+        -H "Host: vault.local" \
         -H "Authorization: Bearer $IDENTITY_TOKEN" \
         http://localhost:8000/api/headers)
     

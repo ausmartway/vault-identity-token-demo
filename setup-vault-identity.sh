@@ -95,7 +95,7 @@ echo "🔑 Getting Vault's public key..."
 # Extract the public key in PEM format using the JWK to PEM converter
 curl -s http://localhost:8200/v1/identity/oidc/.well-known/keys | \
     jq -r '.keys[0]' | \
-    python convert-jwk-to-pem.py > vault-public.pem
+    python3 convert-jwk-to-pem.py > vault-public.pem
 
 echo "Vault public key extracted to PEM format"
 

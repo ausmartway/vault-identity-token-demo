@@ -68,25 +68,8 @@ echo "Identity token: ${IDENTITY_TOKEN:0:50}..."
 # Decode and show the token payload
 echo ""
 echo "🔍 Token payload (decoded):"
-# Use Python for proper base64 decoding with padding handling
-python3 -c "
-import base64
-import json
-import sys
-
-try:
-    token = '$IDENTITY_TOKEN'
-    payload = token.split('.')[1]
-    # Add padding if needed
-    missing_padding = len(payload) % 4
-    if missing_padding:
-        payload += '=' * (4 - missing_padding)
-    decoded = base64.b64decode(payload)
-    parsed = json.loads(decoded)
-    print(json.dumps(parsed, indent=2))
-except Exception as e:
-    print('Could not decode token payload:', str(e))
-" 2>/dev/null || echo "Could not decode token payload"
+# Use separate Python script for JWT decoding
+echo "$IDENTITY_TOKEN" | python3 decode-jwt.py 2>/dev/null || echo "Could not decode token payload"
 
 # Step 3: Test API without token (should fail)
 echo ""

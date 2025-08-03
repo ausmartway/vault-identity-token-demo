@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # HashiCorp Vault
   vault:
-    image: hashicorp/vault:1.15
+    image: hashicorp/vault:1.19.5
     container_name: vault-server
     environment:
       VAULT_DEV_ROOT_TOKEN_ID: myroot
@@ -60,7 +60,7 @@ services:
 
   # Kong Gateway
   kong:
-    image: kong/kong-gateway:3.4
+    image: kong/kong-gateway:3.11
     container_name: kong-gateway
     environment:
       KONG_DATABASE: postgres

@@ -42,7 +42,7 @@ echo ""
 p "# Now let's configure Vault for identity token generation"
 echo ""
 
-p "# Set Vault environment variables"
+p "# Become root user ,set Vault environment variables"
 export VAULT_ADDR='http://localhost:8200'
 export VAULT_TOKEN='myroot'
 
@@ -53,8 +53,7 @@ echo ""
 echo -e "${INFO_COLOR}🔐 Creating Vault entities and authentication...${COLOR_RESET}"
 echo ""
 
-p "# Create an entity for our demo user"
-pe "echo \"Creating Vault entity...\""
+p "# Create an entity for our demo developer user"
 pe "ENTITY_ID=\$(vault write -field=id identity/entity name=\"demo-developer\" policies=\"default\" metadata=department=\"engineering\" metadata=role=\"developer\" metadata=entity_name=\"demo-developer\" metadata=spiffe_id=\"spiffe://vault/engineering/developer/demo-developer\")"
 
 # Silent error checking - not part of the demo
@@ -68,10 +67,10 @@ pe "echo \"Created Vault entity: \$ENTITY_ID\""
 p "# Enable userpass authentication method"
 pe "vault auth list | grep userpass/ > /dev/null || vault auth enable userpass"
 
-p "# Create a demo user"
+p "# Create a demo developer user alias"
 pe "vault write auth/userpass/users/demodeveloper password=password123 policies=default"
 
-p "# Link the user to the entity via entity alias"
+p "# Link the demo developer user to the entity via entity alias"
 pe "USERPASS_ACCESSOR=\$(vault auth list -format=json | jq -r '.\"userpass/\".accessor')"
 pe "vault write identity/entity-alias name=\"demodeveloper\" canonical_id=\"\$ENTITY_ID\" mount_accessor=\"\$USERPASS_ACCESSOR\""
 
@@ -79,11 +78,8 @@ p "# Read the entity to verify"
 pe "vault read -format=json identity/entity/id/\$ENTITY_ID | jq -r ."
 
 echo ""
-echo -e "${INFO_COLOR}� Creating sales user entity...${COLOR_RESET}"
-echo ""
 
 p "# Create an entity for our demo sales user"
-pe "echo \"Creating sales Vault entity...\""
 pe "SALES_ENTITY_ID=\$(vault write -field=id identity/entity name=\"demo-sales\" policies=\"default\" metadata=department=\"sales\" metadata=role=\"manager\" metadata=entity_name=\"demo-sales\" metadata=spiffe_id=\"spiffe://vault/sales/manager/demo-sales\")"
 
 # Silent error checking - not part of the demo
@@ -94,7 +90,7 @@ fi
 
 pe "echo \"Created sales Vault entity: \$SALES_ENTITY_ID\""
 
-p "# Create a demo sales user"
+p "# Create a demo sales user alias"
 pe "vault write auth/userpass/users/demosales password=password123 policies=default"
 
 p "# Link the sales user to the entity via entity alias"

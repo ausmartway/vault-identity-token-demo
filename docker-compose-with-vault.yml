@@ -43,7 +43,7 @@ services:
 
   # Kong database migration
   kong-migration:
-    image: kong/kong-gateway:3.4
+    image: kong/kong-gateway:3.11
     container_name: kong-migration
     environment:
       KONG_DATABASE: postgres

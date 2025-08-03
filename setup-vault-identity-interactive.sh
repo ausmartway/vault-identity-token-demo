@@ -4,7 +4,7 @@
 # This configures Kong to accept JWT tokens signed by Vault
 
 # Source demo-magic.sh for interactive effects
-source ./demo-magic.sh -n -d
+source ./demo-magic.sh
 
 # Set typing speed for demo effect
 TYPE_SPEED=150
@@ -55,7 +55,7 @@ echo ""
 
 p "# Create an entity for our demo user"
 pe "echo \"Creating Vault entity...\""
-pe "ENTITY_ID=\$(vault write -field=id identity/entity name=\"demo-user\" policies=\"default\" metadata=department=\"engineering\" metadata=role=\"developer\" metadata=entity_name=\"demo-user\" metadata=spiffe_id=\"spiffe://vault/engineering/developer/demo-user\")"
+pe "ENTITY_ID=\$(vault write -field=id identity/entity name=\"demo-developer\" policies=\"default\" metadata=department=\"engineering\" metadata=role=\"developer\" metadata=entity_name=\"demo-developer\" metadata=spiffe_id=\"spiffe://vault/engineering/developer/demo-developer\")"
 
 # Silent error checking - not part of the demo
 if [ -z "$ENTITY_ID" ]; then 
@@ -69,35 +69,63 @@ p "# Enable userpass authentication method"
 pe "vault auth list | grep userpass/ > /dev/null || vault auth enable userpass"
 
 p "# Create a demo user"
-pe "vault write auth/userpass/users/demouser password=password123 policies=default"
+pe "vault write auth/userpass/users/demodeveloper password=password123 policies=default"
 
 p "# Link the user to the entity via entity alias"
 pe "USERPASS_ACCESSOR=\$(vault auth list -format=json | jq -r '.\"userpass/\".accessor')"
-pe "vault write identity/entity-alias name=\"demouser\" canonical_id=\"\$ENTITY_ID\" mount_accessor=\"\$USERPASS_ACCESSOR\""
+pe "vault write identity/entity-alias name=\"demodeveloper\" canonical_id=\"\$ENTITY_ID\" mount_accessor=\"\$USERPASS_ACCESSOR\""
 
 p "# Read the entity to verify"
 pe "vault read -format=json identity/entity/id/\$ENTITY_ID | jq -r ."
 
 echo ""
-echo -e "${INFO_COLOR}🔑 Setting up OIDC keys and roles for JWT signing...${COLOR_RESET}"
+echo -e "${INFO_COLOR}� Creating sales user entity...${COLOR_RESET}"
+echo ""
+
+p "# Create an entity for our demo sales user"
+pe "echo \"Creating sales Vault entity...\""
+pe "SALES_ENTITY_ID=\$(vault write -field=id identity/entity name=\"demo-sales\" policies=\"default\" metadata=department=\"sales\" metadata=role=\"manager\" metadata=entity_name=\"demo-sales\" metadata=spiffe_id=\"spiffe://vault/sales/manager/demo-sales\")"
+
+# Silent error checking - not part of the demo
+if [ -z "$SALES_ENTITY_ID" ]; then 
+    echo "Error: Failed to create sales entity or get entity ID"
+    exit 1
+fi
+
+pe "echo \"Created sales Vault entity: \$SALES_ENTITY_ID\""
+
+p "# Create a demo sales user"
+pe "vault write auth/userpass/users/demosales password=password123 policies=default"
+
+p "# Link the sales user to the entity via entity alias"
+pe "vault write identity/entity-alias name=\"demosales\" canonical_id=\"\$SALES_ENTITY_ID\" mount_accessor=\"\$USERPASS_ACCESSOR\""
+
+p "# Read the sales entity to verify"
+pe "vault read -format=json identity/entity/id/\$SALES_ENTITY_ID | jq -r ."
+
+echo ""
+echo -e "${INFO_COLOR}�🔑 Setting up OIDC keys and roles for JWT signing...${COLOR_RESET}"
 echo ""
 
 p "# Create a named key for signing identity tokens, the key auto auto-rotates every 24h hours"
-pe "vault write identity/oidc/key/demo-key algorithm=\"RS256\" verification_ttl=\"24h\" rotation_period=\"24h\""
+pe "vault write identity/oidc/key/human-signer-key algorithm=\"RS256\" verification_ttl=\"24h\" rotation_period=\"24h\""
 
 p "# Create a role with custom SPIFFE-compliant audience, signed jwt token is valid for 1 hour"
-vault write identity/oidc/role/demo-role key="demo-key" ttl="1h" client_id="spiff://kong-api-gateway" template=@identity.tmpl
+vault write identity/oidc/role/human-identity key="human-signer-key" ttl="1h" client_id="spiff://kong-api-gateway" template=@identity.tmpl
 
 p "# Configure the key to allow our custom audience"
-pe "vault write identity/oidc/key/demo-key allowed_client_ids=\"spiff://kong-api-gateway\""
+pe "vault write identity/oidc/key/human-signer-key allowed_client_ids=\"spiff://kong-api-gateway\""
 
 p "# Create policy for token generation"
-pe 'echo "path \"identity/oidc/token/demo-role\" {
+pe 'echo "path \"identity/oidc/token/human-identity\" {
   capabilities = [\"read\", \"create\", \"update\"]
 }" | vault policy write demo-token-policy -'
 
 p "# Attach the policy to our entity using the correct API"
 pe "vault write identity/entity/id/\$ENTITY_ID policies=\"default,demo-token-policy\""
+
+p "# Attach the policy to our sales entity as well"
+pe "vault write identity/entity/id/\$SALES_ENTITY_ID policies=\"default,demo-token-policy\""
 
 echo ""
 echo -e "${SUCCESS_COLOR}✅ Vault identity tokens configured!${COLOR_RESET}"
@@ -140,10 +168,16 @@ pe "curl -X PATCH http://localhost:8001/consumers/vault-identity/jwt/\$KONG_JWT_
 
 pe "echo \"Added Vault public key to Kong consumer\""
 
-p "# Enable JWT plugin with Kong-compatible settings"
-pe "curl -i -X POST http://localhost:8001/services/vault-demo-service/plugins --data \"name=jwt\" --data \"config.key_claim_name=iss\" --data \"config.claims_to_verify=exp\" > /dev/null"
+echo ""
+echo -e "${INFO_COLOR}🛡️ Adding Enhanced JWT Validation...${COLOR_RESET}"
+echo ""
 
-pe "echo \"Enabled JWT plugin on Kong service\""
+p "# Add custom JWT validator with department-based access control"
+p "# This validates audience claims and enforces department authorization"
+pe "curl -i -X POST http://localhost:8001/services/vault-demo-service/plugins --data \"name=pre-function\" --data-urlencode \"config.access@simple-jwt-validator.lua\" > /dev/null"
+
+pe "echo \"Added enhanced JWT validation with department controls\""
+p "# Features: audience validation, department authorization (engineering/security/devops)"
 
 echo ""
 echo -e "${SUCCESS_COLOR}🎉 Setup Complete!${COLOR_RESET}"
@@ -153,6 +187,12 @@ echo -e "  ${VAULT_COLOR}• Vault UI: http://localhost:8200 (token: myroot)${CO
 echo -e "  ${KONG_COLOR}• Kong Manager: http://localhost:8002${COLOR_RESET}"
 echo -e "  ${KONG_COLOR}• Kong Admin: http://localhost:8001${COLOR_RESET}"
 echo -e "  ${INFO_COLOR}• API Gateway: http://localhost:8000${COLOR_RESET}"
+echo ""
+echo -e "${BOLD}${SUCCESS_COLOR}🛡️ Security Features Configured:${COLOR_RESET}"
+echo -e "  ${SUCCESS_COLOR}✅ JWT signature validation with Vault's public key${COLOR_RESET}"
+echo -e "  ${SUCCESS_COLOR}✅ Audience claim validation (spiff://kong-api-gateway)${COLOR_RESET}"
+echo -e "  ${SUCCESS_COLOR}✅ Department-based access control (engineering/security/devops)${COLOR_RESET}"
+echo -e "  ${SUCCESS_COLOR}✅ User context headers (X-User-Department, X-User-Role, etc.)${COLOR_RESET}"
 echo ""
 echo -e "${BOLD}${BLUE}📋 Next Steps:${COLOR_RESET}"
 echo -e "  1. Add 'vault.local' to your /etc/hosts: ${INFO_COLOR}127.0.0.1 vault.local${COLOR_RESET}"

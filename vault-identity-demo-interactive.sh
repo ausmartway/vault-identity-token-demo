@@ -4,7 +4,7 @@
 # Demonstrates complete zero-trust authentication flow
 
 # Source demo-magic.sh for interactive effects
-source ./demo-magic.sh -d -n
+source ./demo-magic.sh
 
 # Set typing speed for demo effect
 TYPE_SPEED=150
@@ -48,8 +48,8 @@ p "# Set Vault environment variable"
 export VAULT_ADDR='http://localhost:8200'
 
 p "# Login to Vault using userpass method"
-p "# Username: demouser, Password: password123"
-LOGIN_RESPONSE=$(curl -s -X POST http://localhost:8200/v1/auth/userpass/login/demouser -d '{"password": "password123"}')
+p "# Username: demodeveloper, Password: password123"
+LOGIN_RESPONSE=$(curl -s -X POST http://localhost:8200/v1/auth/userpass/login/demodeveloper -d '{"password": "password123"}')
 
 p "# Extract the Vault token from response"
 VAULT_TOKEN=$(echo "$LOGIN_RESPONSE" | jq -r '.auth.client_token')
@@ -69,7 +69,7 @@ echo -e "${INFO_COLOR}Now we'll request a signed identity token with SPIFFE audi
 echo ""
 
 p "# Request identity token from Vault"
-pe "IDENTITY_TOKEN_RESPONSE=\$(curl -s -X GET http://localhost:8200/v1/identity/oidc/token/demo-role -H \"X-Vault-Token: \$VAULT_TOKEN\")"
+pe "IDENTITY_TOKEN_RESPONSE=\$(curl -s -X GET http://localhost:8200/v1/identity/oidc/token/human-identity -H \"X-Vault-Token: \$VAULT_TOKEN\")"
 
 pe "IDENTITY_TOKEN=\$(echo \"\$IDENTITY_TOKEN_RESPONSE\" | jq -r '.data.token')"
 
@@ -99,7 +99,7 @@ pe "RESPONSE_NO_TOKEN=\$(curl -s -w \"\\nHTTP_STATUS:%{http_code}\" -H \"Host: v
 
 pe "STATUS_NO_TOKEN=\$(echo \"\$RESPONSE_NO_TOKEN\" | grep \"HTTP_STATUS:\" | cut -d: -f2)"
 
-pe "if [ \"\$STATUS_NO_TOKEN\" = \"401\" ]; then echo \"${SUCCESS_COLOR}✅ Correctly rejected request without token (401)${COLOR_RESET}\"; else echo \"${ERROR_COLOR}❌ Unexpected response without token: \$STATUS_NO_TOKEN${COLOR_RESET}\"; fi"
+if [ "$STATUS_NO_TOKEN" = "401" ]; then echo "${SUCCESS_COLOR}✅ Correctly rejected request without token (401)${COLOR_RESET}"; else echo "${ERROR_COLOR}❌ Unexpected response without token: $STATUS_NO_TOKEN${COLOR_RESET}"; fi
 
 echo ""
 echo -e "${BOLD}${KONG_COLOR}🚀 Step 4: Testing API with Vault Identity Token${COLOR_RESET}"
@@ -134,7 +134,7 @@ echo ""
 
 if [ "$STATUS_WITH_TOKEN" = "200" ]; then 
     echo "Testing POST /api/post..."
-    POST_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST -H "Host: vault.local" -H "Authorization: Bearer $IDENTITY_TOKEN" -H "Content-Type: application/json" -d '{"message": "Hello from Vault identity token!", "user": "demouser"}' http://localhost:8000/api/post)
+    POST_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST -H "Host: vault.local" -H "Authorization: Bearer $IDENTITY_TOKEN" -H "Content-Type: application/json" -d '{"message": "Hello from Vault identity token!", "user": "demodeveloper"}' http://localhost:8000/api/post)
     POST_STATUS=$(echo "$POST_RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
     if [ "$POST_STATUS" = "200" ]; then 
         echo "${SUCCESS_COLOR}✅ POST request successful${COLOR_RESET}"
@@ -149,28 +149,83 @@ if [ "$STATUS_WITH_TOKEN" = "200" ]; then
 fi
 
 echo ""
+echo ""
+
+echo ""
+echo -e "${BOLD}${ERROR_COLOR}🚫 Step 6: Testing Department-Based Access Control${COLOR_RESET}"
+echo -e "${INFO_COLOR}Now let's test that our sales user gets blocked by Kong's department validation...${COLOR_RESET}"
+echo ""
+
+p "# Login as sales user"
+p "# Username: demosales, Password: password123"
+SALES_LOGIN_RESPONSE=$(curl -s -X POST http://localhost:8200/v1/auth/userpass/login/demosales -d '{"password": "password123"}')
+
+p "# Extract the sales user Vault token"
+SALES_VAULT_TOKEN=$(echo "$SALES_LOGIN_RESPONSE" | jq -r '.auth.client_token')
+
+if [ "$SALES_VAULT_TOKEN" = "null" ] || [ -z "$SALES_VAULT_TOKEN" ]; then 
+    echo "${ERROR_COLOR}❌ Failed to login sales user to Vault${COLOR_RESET}"
+    echo "Response: $SALES_LOGIN_RESPONSE"
+    exit 1
+fi
+
+echo "${SUCCESS_COLOR}✅ Sales user logged into Vault${COLOR_RESET}"
+echo "Sales token: ${SALES_VAULT_TOKEN:0:20}..."
+
+p "# Request identity token for sales user"
+pe "SALES_IDENTITY_RESPONSE=\$(curl -s -X GET http://localhost:8200/v1/identity/oidc/token/human-identity -H \"X-Vault-Token: \$SALES_VAULT_TOKEN\")"
+
+pe "SALES_IDENTITY_TOKEN=\$(echo "\$SALES_IDENTITY_RESPONSE" | jq -r '.data.token')"
+
+if [ "$SALES_IDENTITY_TOKEN" = "null" ] || [ -z "$SALES_IDENTITY_TOKEN" ]; then 
+    echo "${ERROR_COLOR}❌ Failed to get sales identity token from Vault${COLOR_RESET}"
+    echo "Response: $SALES_IDENTITY_RESPONSE"
+    exit 1
+fi
+
+echo "${SUCCESS_COLOR}✅ Sales user obtained identity token${COLOR_RESET}"
+echo "Sales identity token: ${SALES_IDENTITY_TOKEN:0:50}..."
+
+p "# Test API access with sales token - should be BLOCKED"
+pe "SALES_RESPONSE=\$(curl -s -w \"\\nHTTP_STATUS:%{http_code}\" -H \"Host: vault.local\" -H \"Authorization: Bearer \$SALES_IDENTITY_TOKEN\" http://localhost:8000/api/get)"
+
+SALES_STATUS=$(echo "$SALES_RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
+SALES_BODY=$(echo "$SALES_RESPONSE" | sed '/HTTP_STATUS:/d')
+
+if [ "$SALES_STATUS" = "403" ]; then
+    echo "${SUCCESS_COLOR}✅ CORRECT! Sales user blocked by Kong (403 Forbidden)${COLOR_RESET}"
+    echo "${ERROR_COLOR}🚫 Kong's response:${COLOR_RESET}"
+    echo "$SALES_BODY" | jq '.' 2>/dev/null || echo "$SALES_BODY"
+else
+    echo "${ERROR_COLOR}❌ Unexpected: Sales user was not blocked. Status: $SALES_STATUS${COLOR_RESET}"
+fi
+
+echo ""
 echo -e "${BOLD}${BLUE}🎯 Demo Summary${COLOR_RESET}"
 echo -e "${BOLD}${BLUE}===============${COLOR_RESET}"
-echo -e "${SUCCESS_COLOR}✅ 1. Logged into Vault with userpass authentication${COLOR_RESET}"
+echo -e "${SUCCESS_COLOR}✅ 1. Logged into Vault with userpass authentication (engineering user)${COLOR_RESET}"
 echo -e "${SUCCESS_COLOR}✅ 2. Obtained Vault identity token (signed by Vault)${COLOR_RESET}"
 echo -e "${SUCCESS_COLOR}✅ 3. Used identity token with Kong API Gateway${COLOR_RESET}"
 echo -e "${SUCCESS_COLOR}✅ 4. Kong validated token using Vault's public key${COLOR_RESET}"
 echo -e "${SUCCESS_COLOR}✅ 5. Kong forwarded request to backend service${COLOR_RESET}"
+echo -e "${SUCCESS_COLOR}✅ 6. Tested sales user - correctly blocked by department policy${COLOR_RESET}"
 echo ""
 
 echo -e "${BOLD}${INFO_COLOR}🔐 Security Flow Demonstrated:${COLOR_RESET}"
 echo -e "1. ${VAULT_COLOR}User authenticates with Vault${COLOR_RESET}"
 echo -e "2. ${VAULT_COLOR}Vault issues cryptographically signed identity token${COLOR_RESET}"
 echo -e "3. ${KONG_COLOR}Kong validates token signature using Vault's public key${COLOR_RESET}"
-echo -e "4. ${KONG_COLOR}Kong forwards authenticated request to backend${COLOR_RESET}"
-echo -e "5. ${SUCCESS_COLOR}Backend receives user context from Kong headers${COLOR_RESET}"
+echo -e "4. ${KONG_COLOR}Kong enforces department-based access control${COLOR_RESET}"
+echo -e "5. ${KONG_COLOR}Kong forwards authenticated request to backend (if authorized)${COLOR_RESET}"
+echo -e "6. ${SUCCESS_COLOR}Backend receives user context from Kong headers${COLOR_RESET}"
 echo ""
 
 echo -e "${BOLD}${YELLOW}💡 This demonstrates zero-trust authentication where:${COLOR_RESET}"
 echo -e "   ${VAULT_COLOR}• Vault is the identity provider and token issuer${COLOR_RESET}"
-echo -e "   ${KONG_COLOR}• Kong is the policy enforcement point${COLOR_RESET}"
+echo -e "   ${KONG_COLOR}• Kong is the policy enforcement point with fine-grained access control${COLOR_RESET}"
 echo -e "   ${SUCCESS_COLOR}• Backend services receive verified user context${COLOR_RESET}"
 echo -e "   ${INFO_COLOR}• No shared secrets between services${COLOR_RESET}"
+echo -e "   ${ERROR_COLOR}• Department-based authorization enforced at gateway level${COLOR_RESET}"
 echo ""
 
 echo -e "${BOLD}${SUCCESS_COLOR}🏆 Production Benefits:${COLOR_RESET}"

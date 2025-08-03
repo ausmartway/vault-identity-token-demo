@@ -10,7 +10,7 @@ LUA_SCRIPT=$(cat simple-jwt-validator.lua)
 # Add the pre-function plugin
 echo "Adding sandbox-safe pre-function plugin..."
 
-curl -i -X POST http://localhost:8001/services/vault-demo-service/plugins \
+curl -i -X POST http://localhost:8001/services/demo-service/plugins \
   --data "name=pre-function" \
   --data-urlencode "config.access[1]=$LUA_SCRIPT"
 

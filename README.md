@@ -1,219 +1,278 @@
-# Kong API Gateway Demo
+# Vault Identity Token + Kong Gateway Demo
 
-This project demonstrates how to set up Kong API Gateway with JWT authentication using Docker.
+This project demonstrates a **zero-trust authentication architecture** using:
+
+- **HashiCorp Vault** as the identity provider issuing cryptographically signed JWT tokens
+- **Kong Gateway** as the API gateway with JWT validation and policy enforcement
+- **SPIFFE-compliant** workload identity with audience claims
+
+## Architecture Overview
+
+```text
+┌─────────────┐    ┌──────────────┐    ┌─────────────┐    ┌─────────────┐
+│   Client    │───▶│    Vault     │───▶│    Kong     │───▶│   Backend   │
+│             │    │  (Identity)  │    │ (Gateway)   │    │  (HTTPBin)  │
+│             │    │              │    │             │    │             │
+└─────────────┘    └──────────────┘    └─────────────┘    └─────────────┘
+      │                     │                   │                 │
+      │                     │                   │                 │
+   1. Auth                2. JWT            3. Validate        4. Request
+   Request             Token + Claims       + Forward         + User Context
+```
 
 ## Quick Start
 
-### 1. Start Kong Gateway
+### 1. Start All Services
 
 ```bash
-# Start all services
-docker-compose up -d
+# Start Vault, Kong, and HTTPBin
+docker compose -f docker-compose-with-vault.yml up -d
 
-# Check if services are running
-docker-compose ps
+# Check if services are healthy
+docker compose -f docker-compose-with-vault.yml ps
 ```
 
-### 2. Configure Kong
-
-```bash
-# Make the setup script executable
-chmod +x setup-kong.sh
-
-# Run the setup script
-./setup-kong.sh
-```
-
-### 3. Add Host Entry
+### 2. Add Host Entry
 
 Add this line to your `/etc/hosts` file:
 
 ```text
-127.0.0.1 api.local
+127.0.0.1 vault.local
 ```
 
-### 4. Test the API
-
-The setup script will generate a JWT token. Use it to test:
+### 3. Configure the Complete System
 
 ```bash
-# Test without token (should fail with 401)
-curl -H "Host: api.local" http://localhost:8000/api/get
+# Make the setup script executable
+chmod +x setup-vault-identity-interactive.sh
 
-# Test with JWT token (should succeed)
-curl -H "Host: api.local" -H "Authorization: Bearer YOUR_JWT_TOKEN" http://localhost:8000/api/get
+# Run the complete setup (interactive mode)
+./setup-vault-identity-interactive.sh
+
+# Or run in auto-play mode
+AUTO_PLAY_MODE=1 ./setup-vault-identity-interactive.sh
 ```
 
-## Kong Services Overview
+### 4. Run the Interactive Demo
+
+```bash
+# Interactive demonstration of the complete flow
+./vault-identity-demo-interactive.sh
+
+# Or in auto-play mode
+AUTO_PLAY_MODE=1 ./vault-identity-demo-interactive.sh
+```
+
+## Services Overview
 
 | Service | Port | Description |
 |---------|------|-------------|
-| Kong Proxy | 8000 | Main gateway endpoint |
+| Kong Proxy | 8000 | Main API gateway endpoint |
 | Kong Admin API | 8001 | Admin API for configuration |
 | Kong Manager | 8002 | Web UI for Kong management |
-| PostgreSQL | 5432 | Kong's database |
+| Vault Server | 8200 | Identity provider and token issuer |
 | HTTPBin | 8080 | Sample backend service |
+| PostgreSQL | 5432 | Kong's database |
 
-## JWT Configuration
+## Security Features
 
-The setup includes:
+### ✅ **Cryptographic Token Validation**
 
-- **Algorithm**: HS256
-- **Issuer**: Kong consumer key
-- **Claims**: Standard JWT claims (iss, exp, iat, sub)
-- **Custom Claims**: name, role (for additional authorization)
+- JWT tokens signed by Vault using RS256 algorithm
+- Public key validation in Kong using Vault's OIDC keys
+- Automatic key rotation support (24-hour rotation period)
+
+### ✅ **SPIFFE-Compliant Identity**
+
+- Audience claim validation (`spiff://kong-api-gateway`)
+- Workload identity with department and role metadata
+- Zero shared secrets between services
+
+### ✅ **Department-Based Access Control**
+
+- JWT claims include department and role information
+- Kong adds user context headers to backend requests
+- Backend services receive authenticated user metadata
+
+**Available Demo Users:**
+
+| Department | Username | Password | Role |
+|------------|----------|----------|------|
+| Engineering | demodeveloper | password123 | developer |
+| Sales | demosales | password123 | manager |
+
+## Authentication Flow
+
+### 1. **User Authentication with Vault**
+
+```bash
+# Authenticate with Vault
+export VAULT_ADDR=http://localhost:8200
+VAULT_TOKEN=$(vault write -field=token auth/userpass/login/demodeveloper password=password123)
+export VAULT_TOKEN
+```
+
+### 2. **Obtain Signed Identity Token**
+
+```bash
+# Get SPIFFE-compliant identity token
+JWT_TOKEN=$(vault read -field=token identity/oidc/token/human-identity)
+```
+
+### 3. **Call API with Token**
+
+```bash
+# Make authenticated request
+curl -H "Host: vault.local" \
+     -H "Authorization: Bearer $JWT_TOKEN" \
+     http://localhost:8000/api/get
+```
+
+## Token Structure
+
+The JWT tokens issued by Vault contain:
+
+```json
+{
+  "aud": "spiff://kong-api-gateway",
+  "azp": "spiffe://vault/engineering/developer/demo-developer",
+  "exp": 1754228088,
+  "iat": 1754224488,
+  "iss": "http://vault.local:8200/v1/identity/oidc",
+  "namespace": "root",
+  "sub": "f388b783-8dec-031e-c344-6aaa18012c77",
+  "userinfo": {
+    "department": "engineering",
+    "entity_id": "f388b783-8dec-031e-c344-6aaa18012c77",
+    "entity_name": "demo-developer",
+    "role": "developer"
+  }
+}
+```
 
 ## Manual Configuration Examples
 
-### Create a Service
+### Create Vault Entity with Metadata
 
 ```bash
-curl -i -X POST http://localhost:8001/services/ \
-  --data "name=my-service" \
-  --data "url=http://backend:80"
+vault write identity/entity \
+  name="demo-user" \
+  policies="default" \
+  metadata=department="engineering" \
+  metadata=role="developer" \
+  metadata=entity_name="demo-user" \
+  metadata=spiffe_id="spiffe://vault/engineering/developer/demo-user"
 ```
 
-### Create a Route
+### Configure OIDC Role for JWT Signing
 
 ```bash
-curl -i -X POST http://localhost:8001/services/my-service/routes \
-  --data "hosts[]=api.example.com" \
-  --data "paths[]=/v1"
+vault write identity/oidc/role/human-identity \
+  key="human-signer-key" \
+  ttl="1h" \
+  client_id="spiff://kong-api-gateway" \
+  template=@identity.tmpl
 ```
 
-### Enable JWT Plugin
+### Kong Service and Route Setup
 
 ```bash
-curl -i -X POST http://localhost:8001/services/my-service/plugins \
-  --data "name=jwt" \
-  --data "config.claims_to_verify=exp,iss" \
-  --data "config.key_claim_name=iss"
+# Create service
+curl -X POST http://localhost:8001/services/ \
+  --data "name=demo-service" \
+  --data "url=http://httpbin:80"
+
+# Create route
+curl -X POST http://localhost:8001/services/demo-service/routes \
+  --data "hosts[]=vault.local" \
+  --data "paths[]=/api"
 ```
 
-### Create Consumer and JWT Credentials
+### Add Kong JWT Consumer
 
 ```bash
 # Create consumer
-curl -i -X POST http://localhost:8001/consumers/ \
-  --data "username=api-user"
+curl -X POST http://localhost:8001/consumers/ \
+  --data "username=vault-signed-identity"
 
-# Create JWT credentials
-curl -i -X POST http://localhost:8001/consumers/api-user/jwt \
-  --data "algorithm=HS256" \
-  --data "key=my-app-key"
+# Add JWT credential with Vault's public key
+curl -X POST http://localhost:8001/consumers/vault-signed-identity/jwt \
+  --data "algorithm=RS256" \
+  --data "key=http://vault.local:8200/v1/identity/oidc" \
+  --data-urlencode "rsa_public_key@vault-public.pem"
 ```
 
-## Generating JWT Tokens
+## Demo Users
 
-### Using Python
+| Username | Password | Department | Role |
+|----------|----------|------------|------|
+| demodeveloper | password123 | engineering | developer |
+| demosales | password123 | sales | manager |
 
-```python
-import jwt
-from datetime import datetime, timedelta
+## File Structure
 
-payload = {
-    'iss': 'your-kong-key',
-    'exp': int((datetime.utcnow() + timedelta(hours=1)).timestamp()),
-    'iat': int(datetime.utcnow().timestamp()),
-    'sub': 'user123',
-    'role': 'admin'
-}
-
-token = jwt.encode(payload, 'your-kong-secret', algorithm='HS256')
+```text
+├── docker-compose-with-vault.yml   # Complete stack with Vault
+├── setup-vault-identity-interactive.sh  # System setup script
+├── vault-identity-demo-interactive.sh   # Demo script
+├── identity.tmpl                   # Vault JWT template
+├── convert-jwk-to-pem.py          # JWK to PEM converter
+├── decode-jwt.py                  # JWT token decoder
+└── demo-magic.sh                  # Interactive demo effects
 ```
 
-### Using Node.js
+## Troubleshooting
 
-```javascript
-const jwt = require('jsonwebtoken');
-
-const payload = {
-    iss: 'your-kong-key',
-    exp: Math.floor(Date.now() / 1000) + (60 * 60), // 1 hour
-    iat: Math.floor(Date.now() / 1000),
-    sub: 'user123',
-    role: 'admin'
-};
-
-const token = jwt.sign(payload, 'your-kong-secret', { algorithm: 'HS256' });
-```
-
-## Common Kong Plugins for API Security
-
-### Rate Limiting
+### Check Service Health
 
 ```bash
-curl -i -X POST http://localhost:8001/services/my-service/plugins \
-  --data "name=rate-limiting" \
-  --data "config.minute=100" \
-  --data "config.hour=1000"
+# Kong status
+curl http://localhost:8001/status
+
+# Vault status
+curl http://localhost:8200/v1/sys/health
 ```
 
-### CORS
+### View Logs
 
 ```bash
-curl -i -X POST http://localhost:8001/services/my-service/plugins \
-  --data "name=cors" \
-  --data "config.origins=*" \
-  --data "config.methods=GET,POST,PUT,DELETE" \
-  --data "config.headers=Accept,Authorization,Content-Type"
+# Kong logs
+docker compose -f docker-compose-with-vault.yml logs kong-gateway
+
+# Vault logs
+docker compose -f docker-compose-with-vault.yml logs vault-server
 ```
 
-### Request Size Limiting
+### Test JWT Token Decoding
 
 ```bash
-curl -i -X POST http://localhost:8001/services/my-service/plugins \
-  --data "name=request-size-limiting" \
-  --data "config.allowed_payload_size=1"
+echo "$JWT_TOKEN" | python3 decode-jwt.py
 ```
 
 ## Cleanup
 
 ```bash
-# Stop and remove all containers
-docker-compose down
+# Stop all services
+docker compose -f docker-compose-with-vault.yml down
 
-# Remove volumes (this will delete the database)
-docker-compose down -v
+# Remove volumes (deletes databases)
+docker compose -f docker-compose-with-vault.yml down -v
 ```
 
-## Troubleshooting
+## Production Considerations
 
-### Check Kong Status
+1. **Vault High Availability**: Configure Vault clustering for production
+2. **Kong Enterprise**: Consider Kong Enterprise for additional features
+3. **TLS/SSL**: Enable HTTPS for all service communications
+4. **Secret Management**: Use proper secret rotation and management
+5. **Monitoring**: Implement comprehensive logging and monitoring
+6. **Performance**: Tune JWT validation performance
 
-```bash
-curl http://localhost:8001/status
-```
+## Benefits of This Architecture
 
-### View Kong Logs
-
-```bash
-docker-compose logs kong
-```
-
-### List All Services
-
-```bash
-curl http://localhost:8001/services
-```
-
-### List All Routes
-
-```bash
-curl http://localhost:8001/routes
-```
-
-### List All Consumers
-
-```bash
-curl http://localhost:8001/consumers
-```
-
-## Next Steps
-
-1. **Production Setup**: Use environment variables for secrets
-2. **SSL/TLS**: Configure HTTPS certificates
-3. **Custom Plugins**: Develop custom Kong plugins
-4. **Monitoring**: Set up logging and monitoring
-5. **Load Balancing**: Configure upstream services
-6. **Advanced Auth**: Integrate with OAuth2, OIDC, or LDAP
+- **Zero Trust**: No shared secrets between services
+- **Centralized Identity**: Single source of truth for user identity
+- **Scalable**: Microservices-ready authentication
+- **Auditable**: Complete audit trail of all authentication decisions
+- **Standards Compliant**: Uses SPIFFE, JWT, and OIDC standards
+- **Flexible**: Easy to extend with additional authorization layers

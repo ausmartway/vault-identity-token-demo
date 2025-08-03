@@ -4,7 +4,12 @@
 # This configures Kong to accept JWT tokens signed by Vault
 
 # Source demo-magic.sh for interactive effects
-source ./demo-magic.sh
+# check if AUTO_PLAY_MODE is set, if not, use the default demo-magic.sh other wise add -d -n to the source command
+if [ -n "$AUTO_PLAY_MODE" ]; then
+    source ./demo-magic.sh -d -n
+else
+    source ./demo-magic.sh
+fi
 
 # Set typing speed for demo effect
 TYPE_SPEED=150
@@ -140,15 +145,15 @@ echo -e "${KONG_COLOR}📝 Configuring Kong API Gateway...${COLOR_RESET}"
 echo ""
 
 p "# Create Kong service pointing to our backend"
-pe "curl -i -X POST http://localhost:8001/services/ --data \"name=vault-demo-service\" --data \"url=http://httpbin:80\" > /dev/null"
+pe "curl -i -X POST http://localhost:8001/services/ --data \"name=demo-service\" --data \"url=http://httpbin:80\" > /dev/null"
 p "Created Kong service"
 
 p "# Create route for our API"
-pe "curl -i -X POST http://localhost:8001/services/vault-demo-service/routes --data \"hosts[]=vault.local\" --data \"paths[]=/api\" > /dev/null"
+pe "curl -i -X POST http://localhost:8001/services/demo-service/routes --data \"hosts[]=vault.local\" --data \"paths[]=/api\" > /dev/null"
 p "Created Kong route"
 
 p "# Create consumer for Vault tokens"
-pe "curl -i -X POST http://localhost:8001/consumers/ --data \"username=vault-identity\" > /dev/null"
+pe "curl -i -X POST http://localhost:8001/consumers/ --data \"username=vault-signed-identity\" > /dev/null"
 p "Created Kong consumer"
 
 echo ""
@@ -156,13 +161,13 @@ echo -e "${INFO_COLOR}🔐 Adding Vault's public key to Kong for JWT validation.
 echo ""
 
 p "# Add JWT credential with Vault's public key"
-pe "curl -i -X POST http://localhost:8001/consumers/vault-identity/jwt --data \"algorithm=RS256\" --data \"key=http://vault.local:8200/v1/identity/oidc\" --data-urlencode \"rsa_public_key@vault-public.pem\" > /dev/null"
+pe "curl -i -X POST http://localhost:8001/consumers/vault-signed-identity/jwt --data \"algorithm=RS256\" --data \"key=http://vault.local:8200/v1/identity/oidc\" --data-urlencode \"rsa_public_key@vault-public.pem\" > /dev/null"
 
 p "# Ensure the public key is synchronized (handles key rotation)"
-pe "KONG_JWT_ID=\$(curl -s http://localhost:8001/consumers/vault-identity/jwt | jq -r '.data[0].id')"
-pe "curl -X PATCH http://localhost:8001/consumers/vault-identity/jwt/\$KONG_JWT_ID --data-urlencode \"rsa_public_key@vault-public.pem\" > /dev/null"
+pe "KONG_JWT_ID=\$(curl -s http://localhost:8001/consumers/vault-signed-identity/jwt | jq -r '.data[0].id')"
+pe "curl -X PATCH http://localhost:8001/consumers/vault-signed-identity/jwt/\$KONG_JWT_ID --data-urlencode \"rsa_public_key@vault-public.pem\" > /dev/null"
 
-pe "echo \"Added Vault public key to Kong consumer\""
+echo "Added Vault public key to Kong consumer"
 
 echo ""
 echo -e "${INFO_COLOR}🛡️ Adding Enhanced JWT Validation...${COLOR_RESET}"
@@ -170,9 +175,9 @@ echo ""
 
 p "# Add custom JWT validator with department-based access control"
 p "# This validates audience claims and enforces department authorization"
-pe "curl -i -X POST http://localhost:8001/services/vault-demo-service/plugins --data \"name=pre-function\" --data-urlencode \"config.access@simple-jwt-validator.lua\" > /dev/null"
+pe "curl -i -X POST http://localhost:8001/services/demo-service/plugins --data \"name=pre-function\" --data-urlencode \"config.access@simple-jwt-validator.lua\" > /dev/null"
 
-pe "echo \"Added enhanced JWT validation with department controls\""
+echo "Added enhanced JWT validation with department controls"
 p "# Features: audience validation, department authorization (engineering/security/devops)"
 
 echo ""

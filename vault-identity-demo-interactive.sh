@@ -4,7 +4,12 @@
 # Demonstrates complete zero-trust authentication flow
 
 # Source demo-magic.sh for interactive effects
-source ./demo-magic.sh
+# check if AUTO_PLAY_MODE is set to true, if not, use the default demo-magic.sh other wise add -d -n to the source command
+if [ -n "$AUTO_PLAY_MODE" ]; then
+    source ./demo-magic.sh -d -n
+else
+    source ./demo-magic.sh
+fi
 
 # Set typing speed for demo effect
 TYPE_SPEED=150
@@ -33,9 +38,9 @@ p "# First, let's verify our services are running"
 curl -f http://localhost:8001/status > /dev/null 2>&1 && curl -f http://localhost:8200/v1/sys/health > /dev/null 2>&1
 
 if [ $? -eq 0 ]; then
-    echo "${SUCCESS_COLOR}✅ Both Kong and Vault are running${COLOR_RESET}"
+    echo -e "${SUCCESS_COLOR}✅ Both Kong and Vault are running${COLOR_RESET}"
 else
-    echo "${ERROR_COLOR}❌ Services not ready. Please run setup first.${COLOR_RESET}"
+    echo -e "${ERROR_COLOR}❌ Services not ready. Please run setup first.${COLOR_RESET}"
     exit 1
 fi
 
@@ -55,12 +60,12 @@ p "# Extract the Vault token from response"
 VAULT_TOKEN=$(echo "$LOGIN_RESPONSE" | jq -r '.auth.client_token')
 
 if [ "$VAULT_TOKEN" = "null" ] || [ -z "$VAULT_TOKEN" ]; then 
-    echo "${ERROR_COLOR}❌ Failed to login to Vault${COLOR_RESET}"
+    echo -e "${ERROR_COLOR}❌ Failed to login to Vault${COLOR_RESET}"
     echo "Response: $LOGIN_RESPONSE"
     exit 1
 fi
 
-echo "${SUCCESS_COLOR}✅ Successfully logged into Vault${COLOR_RESET}"
+echo -e "${SUCCESS_COLOR}✅ Successfully logged into Vault${COLOR_RESET}"
 echo "Vault token: ${VAULT_TOKEN:0:20}..."
 
 echo ""
@@ -74,12 +79,12 @@ pe "IDENTITY_TOKEN_RESPONSE=\$(curl -s -X GET http://localhost:8200/v1/identity/
 pe "IDENTITY_TOKEN=\$(echo \"\$IDENTITY_TOKEN_RESPONSE\" | jq -r '.data.token')"
 
 if [ "$IDENTITY_TOKEN" = "null" ] || [ -z "$IDENTITY_TOKEN" ]; then 
-    echo "${ERROR_COLOR}❌ Failed to get identity token from Vault${COLOR_RESET}"
+    echo -e "${ERROR_COLOR}❌ Failed to get identity token from Vault${COLOR_RESET}"
     echo "Response: $IDENTITY_TOKEN_RESPONSE"
     exit 1
 fi
 
-echo "${SUCCESS_COLOR}✅ Successfully obtained Vault identity token${COLOR_RESET}"
+echo -e "${SUCCESS_COLOR}✅ Successfully obtained Vault identity token${COLOR_RESET}"
 echo "Identity token: ${IDENTITY_TOKEN:0:50}..."
 
 echo ""
@@ -115,15 +120,15 @@ BODY_WITH_TOKEN=$(echo "$RESPONSE_WITH_TOKEN" | sed '/HTTP_STATUS:/d')
 echo "Response status: $STATUS_WITH_TOKEN"
 
 if [ "$STATUS_WITH_TOKEN" = "200" ]; then 
-    echo "${SUCCESS_COLOR}✅ SUCCESS! Kong validated Vault identity token${COLOR_RESET}"
+    echo -e "${SUCCESS_COLOR}✅ SUCCESS! Kong validated Vault identity token${COLOR_RESET}"
     echo ""
-    echo "${INFO_COLOR}🔍 Response from backend (via Kong):${COLOR_RESET}"
+    echo -e "${INFO_COLOR}🔍 Response from backend (via Kong):${COLOR_RESET}"
     echo "$BODY_WITH_TOKEN" | jq '.' 2>/dev/null || echo "$BODY_WITH_TOKEN"
     echo ""
-    echo "${INFO_COLOR}🏷️  Headers Kong added (showing consumer info):${COLOR_RESET}"
+    echo -e "${INFO_COLOR}🏷️  Headers Kong added (showing consumer info):${COLOR_RESET}"
     echo "$BODY_WITH_TOKEN" | jq -r '.headers | to_entries[] | select(.key | startswith("X-")) | "\(.key): \(.value)"' 2>/dev/null || echo "Headers processed by Kong"
 else 
-    echo "${ERROR_COLOR}❌ Failed to validate Vault identity token${COLOR_RESET}"
+    echo -e "${ERROR_COLOR}❌ Failed to validate Vault identity token${COLOR_RESET}"
     echo "Response: $BODY_WITH_TOKEN"
 fi
 
@@ -137,9 +142,9 @@ if [ "$STATUS_WITH_TOKEN" = "200" ]; then
     POST_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST -H "Host: vault.local" -H "Authorization: Bearer $IDENTITY_TOKEN" -H "Content-Type: application/json" -d '{"message": "Hello from Vault identity token!", "user": "demodeveloper"}' http://localhost:8000/api/post)
     POST_STATUS=$(echo "$POST_RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
     if [ "$POST_STATUS" = "200" ]; then 
-        echo "${SUCCESS_COLOR}✅ POST request successful${COLOR_RESET}"
+        echo -e "${SUCCESS_COLOR}✅ POST request successful${COLOR_RESET}"
     else 
-        echo "${ERROR_COLOR}❌ POST request failed: $POST_STATUS${COLOR_RESET}"
+        echo -e "${ERROR_COLOR}❌ POST request failed: $POST_STATUS${COLOR_RESET}"
     fi
     echo ""
     echo "Testing GET /api/headers..."
@@ -164,12 +169,12 @@ p "# Extract the sales user Vault token"
 SALES_VAULT_TOKEN=$(echo "$SALES_LOGIN_RESPONSE" | jq -r '.auth.client_token')
 
 if [ "$SALES_VAULT_TOKEN" = "null" ] || [ -z "$SALES_VAULT_TOKEN" ]; then 
-    echo "${ERROR_COLOR}❌ Failed to login sales user to Vault${COLOR_RESET}"
+    echo -e "${ERROR_COLOR}❌ Failed to login sales user to Vault${COLOR_RESET}"
     echo "Response: $SALES_LOGIN_RESPONSE"
     exit 1
 fi
 
-echo "${SUCCESS_COLOR}✅ Sales user logged into Vault${COLOR_RESET}"
+echo -e "${SUCCESS_COLOR}✅ Sales user logged into Vault${COLOR_RESET}"
 echo "Sales token: ${SALES_VAULT_TOKEN:0:20}..."
 
 p "# Request identity token for sales user"
@@ -178,12 +183,12 @@ pe "SALES_IDENTITY_RESPONSE=\$(curl -s -X GET http://localhost:8200/v1/identity/
 pe "SALES_IDENTITY_TOKEN=\$(echo "\$SALES_IDENTITY_RESPONSE" | jq -r '.data.token')"
 
 if [ "$SALES_IDENTITY_TOKEN" = "null" ] || [ -z "$SALES_IDENTITY_TOKEN" ]; then 
-    echo "${ERROR_COLOR}❌ Failed to get sales identity token from Vault${COLOR_RESET}"
+    echo -e "${ERROR_COLOR}❌ Failed to get sales identity token from Vault${COLOR_RESET}"
     echo "Response: $SALES_IDENTITY_RESPONSE"
     exit 1
 fi
 
-echo "${SUCCESS_COLOR}✅ Sales user obtained identity token${COLOR_RESET}"
+echo -e "${SUCCESS_COLOR}✅ Sales user obtained identity token${COLOR_RESET}"
 echo "Sales identity token: ${SALES_IDENTITY_TOKEN:0:50}..."
 
 p "# Test API access with sales token - should be BLOCKED"
@@ -193,11 +198,11 @@ SALES_STATUS=$(echo "$SALES_RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
 SALES_BODY=$(echo "$SALES_RESPONSE" | sed '/HTTP_STATUS:/d')
 
 if [ "$SALES_STATUS" = "403" ]; then
-    echo "${SUCCESS_COLOR}✅ CORRECT! Sales user blocked by Kong (403 Forbidden)${COLOR_RESET}"
-    echo "${ERROR_COLOR}🚫 Kong's response:${COLOR_RESET}"
+    echo -e "${SUCCESS_COLOR}✅ CORRECT! Sales user blocked by Kong (403 Forbidden)${COLOR_RESET}"
+    echo -e "${ERROR_COLOR}🚫 Kong's response:${COLOR_RESET}"
     echo "$SALES_BODY" | jq '.' 2>/dev/null || echo "$SALES_BODY"
 else
-    echo "${ERROR_COLOR}❌ Unexpected: Sales user was not blocked. Status: $SALES_STATUS${COLOR_RESET}"
+    echo -e "${ERROR_COLOR}❌ Unexpected: Sales user was not blocked. Status: $SALES_STATUS${COLOR_RESET}"
 fi
 
 echo ""

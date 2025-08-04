@@ -231,7 +231,6 @@ echo -e "2. ${VAULT_COLOR}Vault issues cryptographically signed identity token${
 echo -e "3. ${KONG_COLOR}Kong validates token signature using Vault's public key${COLOR_RESET}"
 echo -e "4. ${KONG_COLOR}Kong enforces department-based access control${COLOR_RESET}"
 echo -e "5. ${KONG_COLOR}Kong forwards authenticated request to backend (if authorized)${COLOR_RESET}"
-echo -e "6. ${SUCCESS_COLOR}Backend receives user context from Kong headers${COLOR_RESET}"
 echo ""
 
 echo -e "${BOLD}${YELLOW}💡 This demonstrates zero-trust authentication where:${COLOR_RESET}"
@@ -239,7 +238,6 @@ echo -e "   ${VAULT_COLOR}• Vault is the identity provider and token issuer${C
 echo -e "   ${KONG_COLOR}• Kong is the policy enforcement point with fine-grained access control${COLOR_RESET}"
 echo -e "   ${SUCCESS_COLOR}• Backend services receive verified user context${COLOR_RESET}"
 echo -e "   ${INFO_COLOR}• No shared secrets between services${COLOR_RESET}"
-echo -e "   ${ERROR_COLOR}• Department-based authorization enforced at gateway level${COLOR_RESET}"
 echo ""
 
 echo -e "${BOLD}${SUCCESS_COLOR}🏆 Production Benefits:${COLOR_RESET}"

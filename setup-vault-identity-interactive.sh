@@ -193,7 +193,6 @@ echo -e "${BOLD}${SUCCESS_COLOR}🛡️ Security Features Configured:${COLOR_RES
 echo -e "  ${SUCCESS_COLOR}✅ JWT signature validation with Vault's public key${COLOR_RESET}"
 echo -e "  ${SUCCESS_COLOR}✅ Audience claim validation (spiffe://kong-api-gateway)${COLOR_RESET}"
 echo -e "  ${SUCCESS_COLOR}✅ Department-based access control (engineering/security/devops)${COLOR_RESET}"
-echo -e "  ${SUCCESS_COLOR}✅ User context headers (X-User-Department, X-User-Role, etc.)${COLOR_RESET}"
 echo ""
 echo -e "${BOLD}${BLUE}📋 Next Steps:${COLOR_RESET}"
 echo -e "  1. Run the interactive demo: ${INFO_COLOR}./vault-identity-demo-interactive.sh${COLOR_RESET}"

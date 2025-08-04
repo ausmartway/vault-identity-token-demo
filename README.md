@@ -46,15 +46,7 @@ docker compose -f docker-compose-with-vault.yml up -d
 docker compose -f docker-compose-with-vault.yml ps
 ```
 
-### 2. Add Host Entry
-
-Add this line to your `/etc/hosts` file:
-
-```text
-127.0.0.1 vault.local
-```
-
-### 3. Configure the Complete System
+### 2. Configure the Complete System
 
 ```bash
 # Make the setup script executable
@@ -67,7 +59,7 @@ chmod +x setup-vault-identity-interactive.sh
 AUTO_PLAY_MODE=1 ./setup-vault-identity-interactive.sh
 ```
 
-### 4. Run the Interactive Demo
+### 3. Run the Interactive Demo
 
 ```bash
 # Interactive demonstration of the complete flow
@@ -137,7 +129,7 @@ JWT_TOKEN=$(vault read -field=token identity/oidc/token/human-identity)
 
 ```bash
 # Make authenticated request
-curl -H "Host: vault.local" \
+curl -H "Host: localhost" \
      -H "Authorization: Bearer $JWT_TOKEN" \
      http://localhost:8000/api/get
 ```
@@ -152,7 +144,7 @@ The JWT tokens issued by Vault contain:
   "azp": "spiffe://vault/engineering/developer/demo-developer",
   "exp": 1754228088,
   "iat": 1754224488,
-  "iss": "http://vault.local:8200/v1/identity/oidc",
+  "iss": "http://localhost:8200/v1/identity/oidc",
   "namespace": "root",
   "sub": "f388b783-8dec-031e-c344-6aaa18012c77",
   "userinfo": {
@@ -198,7 +190,7 @@ curl -X POST http://localhost:8001/services/ \
 
 # Create route
 curl -X POST http://localhost:8001/services/demo-service/routes \
-  --data "hosts[]=vault.local" \
+  --data "hosts[]=localhost" \
   --data "paths[]=/api"
 ```
 
@@ -212,7 +204,7 @@ curl -X POST http://localhost:8001/consumers/ \
 # Add JWT credential with Vault's public key
 curl -X POST http://localhost:8001/consumers/vault-signed-identity/jwt \
   --data "algorithm=RS256" \
-  --data "key=http://vault.local:8200/v1/identity/oidc" \
+  --data "key=http://localhost:8200/v1/identity/oidc" \
   --data-urlencode "rsa_public_key@vault-public.pem"
 ```
 

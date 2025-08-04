@@ -119,7 +119,7 @@ pe "vault write identity/oidc/key/human-signer-key allowed_client_ids=\"spiffe:/
 
 p "# Create policy for token generation"
 pe 'echo "path \"identity/oidc/token/human-identity\" {
-  capabilities = [\"read\", \"create\", \"update\"]
+  capabilities = [\"read\"]
 }" | vault policy write demo-token-policy -'
 
 p "# Attach the policy to our entity using the correct API"

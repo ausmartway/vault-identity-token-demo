@@ -1,5 +1,6 @@
 -- Simple JWT claim validator for Kong (sandbox-safe)
 -- This validates audience and department without external libraries
+-- In production, use a proper JWT library for full validation, or even use OPA server to handle complex policies if KONG Enterprise is available.
 
 -- Get the Authorization header
 local auth_header = kong.request.get_header("authorization")
@@ -57,7 +58,7 @@ if not aud_match or aud_match ~= expected_audience then
 end
 
 -- Validate department
-local allowed_departments = {"engineering", "security", "devops"}
+local allowed_departments = {"engineering"}
 if not dept_match then
     return kong.response.exit(403, {message = "Access denied: Missing department claim"})
 end

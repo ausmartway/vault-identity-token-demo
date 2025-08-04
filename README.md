@@ -9,15 +9,29 @@ This project demonstrates a **zero-trust authentication architecture** using:
 ## Architecture Overview
 
 ```text
-┌─────────────┐    ┌──────────────┐    ┌─────────────┐    ┌─────────────┐
-│   Client    │───▶│    Vault     │───▶│    Kong     │───▶│   Backend   │
-│             │    │  (Identity)  │    │ (Gateway)   │    │  (HTTPBin)  │
-│             │    │              │    │             │    │             │
-└─────────────┘    └──────────────┘    └─────────────┘    └─────────────┘
-      │                     │                   │                 │
-      │                     │                   │                 │
-   1. Auth                2. JWT            3. Validate        4. Request
-   Request             Token + Claims       + Forward         + User Context
+┌─────────────┐                  ┌──────────────┐
+│   Client    │◀─── 2. JWT Token ─│    Vault     │
+│             │                  │  (Identity)  │
+│             │─── 1. Auth Req ──▶│              │
+└─────┬───────┘                  └──────▲───────┘
+      │                                 │
+      │ 3. API Request                  │ 4. Token
+      │    + JWT Token                  │    Validation
+      ▼                                 │
+┌─────────────┐                        │
+│    Kong     │────────────────────────┘
+│ (Gateway)   │
+│             │
+└─────┬───────┘
+      │
+      │ 5. Forwarded Request
+      │    + User Context
+      ▼
+┌─────────────┐
+│   Backend   │
+│  (HTTPBin)  │
+│             │
+└─────────────┘
 ```
 
 ## Quick Start

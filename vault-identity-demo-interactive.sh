@@ -104,7 +104,7 @@ pe "RESPONSE_NO_TOKEN=\$(curl -s -w \"\\nHTTP_STATUS:%{http_code}\" -H \"Host: v
 
 pe "STATUS_NO_TOKEN=\$(echo \"\$RESPONSE_NO_TOKEN\" | grep \"HTTP_STATUS:\" | cut -d: -f2)"
 
-if [ "$STATUS_NO_TOKEN" = "401" ]; then echo "${SUCCESS_COLOR}✅ Correctly rejected request without token (401)${COLOR_RESET}"; else echo "${ERROR_COLOR}❌ Unexpected response without token: $STATUS_NO_TOKEN${COLOR_RESET}"; fi
+if [ "$STATUS_NO_TOKEN" = "401" ]; then echo -e "${SUCCESS_COLOR}✅ Correctly rejected request without token (401)${COLOR_RESET}"; else echo "${ERROR_COLOR}❌ Unexpected response without token: $STATUS_NO_TOKEN${COLOR_RESET}"; fi
 
 echo ""
 echo -e "${BOLD}${KONG_COLOR}🚀 Step 4: Testing API with Vault Identity Token${COLOR_RESET}"

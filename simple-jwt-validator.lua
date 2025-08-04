@@ -46,7 +46,7 @@ local entity_match = payload_json:match('"entity_name"%s*:%s*"([^"]+)"')
 local sub_match = payload_json:match('"sub"%s*:%s*"([^"]+)"')
 
 -- Validate audience
-local expected_audience = "spiff://kong-api-gateway"
+local expected_audience = "spiffe://kong-api-gateway"
 if not aud_match or aud_match ~= expected_audience then
     kong.log.err("Invalid audience. Expected: " .. expected_audience .. ", Got: " .. tostring(aud_match))
     return kong.response.exit(403, {

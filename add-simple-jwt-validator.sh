@@ -19,7 +19,7 @@ if [ $? -eq 0 ]; then
     echo "✅ Simple JWT validator added successfully!"
     echo ""
     echo "🔍 Validation Features:"
-    echo "  • Audience validation: 'spiff://kong-api-gateway'"
+    echo "  • Audience validation: 'spiffe://kong-api-gateway'"
     echo "  • Department authorization: engineering, security, devops"
     echo "  • Custom headers: X-User-Department, X-User-Role, X-User-Entity, X-User-ID"
     echo ""

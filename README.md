@@ -98,7 +98,7 @@ AUTO_PLAY_MODE=1 ./vault-identity-demo-interactive.sh
 
 ### ✅ **SPIFFE-Compliant Identity**
 
-- Audience claim validation (`spiff://kong-api-gateway`)
+- Audience claim validation (`spiffe://kong-api-gateway`)
 - Workload identity with department and role metadata
 - Zero shared secrets between services
 
@@ -148,7 +148,7 @@ The JWT tokens issued by Vault contain:
 
 ```json
 {
-  "aud": "spiff://kong-api-gateway",
+  "aud": "spiffe://kong-api-gateway",
   "azp": "spiffe://vault/engineering/developer/demo-developer",
   "exp": 1754228088,
   "iat": 1754224488,
@@ -184,7 +184,7 @@ vault write identity/entity \
 vault write identity/oidc/role/human-identity \
   key="human-signer-key" \
   ttl="1h" \
-  client_id="spiff://kong-api-gateway" \
+  client_id="spiffe://kong-api-gateway" \
   template=@identity.tmpl
 ```
 

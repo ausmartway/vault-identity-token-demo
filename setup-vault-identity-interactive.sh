@@ -112,10 +112,10 @@ p "# Create a named key for signing identity tokens, the key auto auto-rotates e
 pe "vault write identity/oidc/key/human-signer-key algorithm=\"RS256\" verification_ttl=\"24h\" rotation_period=\"24h\""
 
 p "# Create a role with custom SPIFFE-compliant audience, signed jwt token is valid for 1 hour"
-vault write identity/oidc/role/human-identity key="human-signer-key" ttl="1h" client_id="spiff://kong-api-gateway" template=@identity.tmpl
+vault write identity/oidc/role/human-identity key="human-signer-key" ttl="1h" client_id="spiffe://kong-api-gateway" template=@identity.tmpl
 
 p "# Configure the key to allow our custom audience"
-pe "vault write identity/oidc/key/human-signer-key allowed_client_ids=\"spiff://kong-api-gateway\""
+pe "vault write identity/oidc/key/human-signer-key allowed_client_ids=\"spiffe://kong-api-gateway\""
 
 p "# Create policy for token generation"
 pe 'echo "path \"identity/oidc/token/human-identity\" {
@@ -191,7 +191,7 @@ echo -e "  ${INFO_COLOR}• API Gateway: http://localhost:8000${COLOR_RESET}"
 echo ""
 echo -e "${BOLD}${SUCCESS_COLOR}🛡️ Security Features Configured:${COLOR_RESET}"
 echo -e "  ${SUCCESS_COLOR}✅ JWT signature validation with Vault's public key${COLOR_RESET}"
-echo -e "  ${SUCCESS_COLOR}✅ Audience claim validation (spiff://kong-api-gateway)${COLOR_RESET}"
+echo -e "  ${SUCCESS_COLOR}✅ Audience claim validation (spiffe://kong-api-gateway)${COLOR_RESET}"
 echo -e "  ${SUCCESS_COLOR}✅ Department-based access control (engineering/security/devops)${COLOR_RESET}"
 echo -e "  ${SUCCESS_COLOR}✅ User context headers (X-User-Department, X-User-Role, etc.)${COLOR_RESET}"
 echo ""

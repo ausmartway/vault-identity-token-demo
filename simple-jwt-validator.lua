@@ -83,15 +83,3 @@ end
 kong.log.info("JWT validation successful - User: " .. tostring(entity_match) .. 
               ", Department: " .. dept_match .. 
               ", Role: " .. tostring(role_match))
-
--- Add custom headers
-kong.service.request.set_header("X-User-Department", dept_match)
-if role_match then
-    kong.service.request.set_header("X-User-Role", role_match)
-end
-if entity_match then
-    kong.service.request.set_header("X-User-Entity", entity_match)
-end
-if sub_match then
-    kong.service.request.set_header("X-User-ID", sub_match)
-end

@@ -100,7 +100,7 @@ echo -e "${INFO_COLOR}First, let's verify Kong rejects requests without authenti
 echo ""
 
 p "# Test API endpoint without any token"
-pe "RESPONSE_NO_TOKEN=\$(curl -s -w \"\\nHTTP_STATUS:%{http_code}\" -H \"Host: vault.local\" http://localhost:8000/api/get)"
+pe "RESPONSE_NO_TOKEN=\$(curl -s -w \"\\nHTTP_STATUS:%{http_code}\" -H \"Host: localhost\" http://localhost:8000/api/get)"
 
 pe "STATUS_NO_TOKEN=\$(echo \"\$RESPONSE_NO_TOKEN\" | grep \"HTTP_STATUS:\" | cut -d: -f2)"
 
@@ -112,7 +112,7 @@ echo -e "${INFO_COLOR}Now let's use our Vault identity token to access the API..
 echo ""
 
 p "# Test API endpoint with Vault identity token"
-RESPONSE_WITH_TOKEN=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -H "Host: vault.local" -H "Authorization: Bearer $IDENTITY_TOKEN" http://localhost:8000/api/get)
+RESPONSE_WITH_TOKEN=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -H "Host: localhost" -H "Authorization: Bearer $IDENTITY_TOKEN" http://localhost:8000/api/get)
 
 STATUS_WITH_TOKEN=$(echo "$RESPONSE_WITH_TOKEN" | grep "HTTP_STATUS:" | cut -d: -f2)
 BODY_WITH_TOKEN=$(echo "$RESPONSE_WITH_TOKEN" | sed '/HTTP_STATUS:/d')
@@ -139,7 +139,7 @@ echo ""
 
 if [ "$STATUS_WITH_TOKEN" = "200" ]; then 
     echo "Testing POST /api/post..."
-    POST_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST -H "Host: vault.local" -H "Authorization: Bearer $IDENTITY_TOKEN" -H "Content-Type: application/json" -d '{"message": "Hello from Vault identity token!", "user": "demodeveloper"}' http://localhost:8000/api/post)
+    POST_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST -H "Host: localhost" -H "Authorization: Bearer $IDENTITY_TOKEN" -H "Content-Type: application/json" -d '{"message": "Hello from Vault identity token!", "user": "demodeveloper"}' http://localhost:8000/api/post)
     POST_STATUS=$(echo "$POST_RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
     if [ "$POST_STATUS" = "200" ]; then 
         echo -e "${SUCCESS_COLOR}✅ POST request successful${COLOR_RESET}"
@@ -148,7 +148,7 @@ if [ "$STATUS_WITH_TOKEN" = "200" ]; then
     fi
     echo ""
     echo "Testing GET /api/headers..."
-    HEADERS_RESPONSE=$(curl -s -H "Host: vault.local" -H "Authorization: Bearer $IDENTITY_TOKEN" http://localhost:8000/api/headers)
+    HEADERS_RESPONSE=$(curl -s -H "Host: localhost" -H "Authorization: Bearer $IDENTITY_TOKEN" http://localhost:8000/api/headers)
     echo "Backend received these headers:"
     echo "$HEADERS_RESPONSE" | jq '.headers' 2>/dev/null || echo "$HEADERS_RESPONSE"
 fi
@@ -201,7 +201,7 @@ pe "echo \"\$SALES_IDENTITY_TOKEN\" | python3 decode-jwt.py 2>/dev/null || echo 
 echo ""
 
 p "# Test API access with sales token - should be BLOCKED"
-pe "SALES_RESPONSE=\$(curl -s -w \"\\nHTTP_STATUS:%{http_code}\" -H \"Host: vault.local\" -H \"Authorization: Bearer \$SALES_IDENTITY_TOKEN\" http://localhost:8000/api/get)"
+pe "SALES_RESPONSE=\$(curl -s -w \"\\nHTTP_STATUS:%{http_code}\" -H \"Host: localhost\" -H \"Authorization: Bearer \$SALES_IDENTITY_TOKEN\" http://localhost:8000/api/get)"
 
 SALES_STATUS=$(echo "$SALES_RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
 SALES_BODY=$(echo "$SALES_RESPONSE" | sed '/HTTP_STATUS:/d')

@@ -40,10 +40,10 @@ This project demonstrates a **zero-trust authentication architecture** using:
 
 ```bash
 # Start Vault, Kong, and HTTPBin
-docker compose -f docker-compose-with-vault.yml up -d
+docker compose up -d
 
 # Check if services are healthy
-docker compose -f docker-compose-with-vault.yml ps
+docker compose ps
 ```
 
 ### 2. Configure the Complete System
@@ -218,7 +218,7 @@ curl -X POST http://localhost:8001/consumers/vault-signed-identity/jwt \
 ## File Structure
 
 ```text
-├── docker-compose-with-vault.yml   # Complete stack with Vault
+├── docker-compose.yml              # Complete stack with Vault
 ├── setup-vault-identity-interactive.sh  # System setup script
 ├── vault-identity-demo-interactive.sh   # Demo script
 ├── identity.tmpl                   # Vault JWT template
@@ -243,10 +243,10 @@ curl http://localhost:8200/v1/sys/health
 
 ```bash
 # Kong logs
-docker compose -f docker-compose-with-vault.yml logs kong-gateway
+docker compose logs kong-gateway
 
 # Vault logs
-docker compose -f docker-compose-with-vault.yml logs vault-server
+docker compose logs vault-server
 ```
 
 ### Test JWT Token Decoding
@@ -259,10 +259,10 @@ echo "$JWT_TOKEN" | python3 decode-jwt.py
 
 ```bash
 # Stop all services
-docker compose -f docker-compose-with-vault.yml down
+docker compose down
 
 # Remove volumes (deletes databases)
-docker compose -f docker-compose-with-vault.yml down -v
+docker compose down -v
 ```
 
 ## Production Considerations

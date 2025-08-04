@@ -46,7 +46,7 @@ local entity_match = payload_json:match('"entity_name"%s*:%s*"([^"]+)"')
 local sub_match = payload_json:match('"sub"%s*:%s*"([^"]+)"')
 
 -- Validate audience
-local expected_audience = "spiff://kong-api-gateway"
+local expected_audience = "spiffe://kong-api-gateway"
 if not aud_match or aud_match ~= expected_audience then
     kong.log.err("Invalid audience. Expected: " .. expected_audience .. ", Got: " .. tostring(aud_match))
     return kong.response.exit(403, {
@@ -83,15 +83,3 @@ end
 kong.log.info("JWT validation successful - User: " .. tostring(entity_match) .. 
               ", Department: " .. dept_match .. 
               ", Role: " .. tostring(role_match))
-
--- Add custom headers
-kong.service.request.set_header("X-User-Department", dept_match)
-if role_match then
-    kong.service.request.set_header("X-User-Role", role_match)
-end
-if entity_match then
-    kong.service.request.set_header("X-User-Entity", entity_match)
-end
-if sub_match then
-    kong.service.request.set_header("X-User-ID", sub_match)
-end

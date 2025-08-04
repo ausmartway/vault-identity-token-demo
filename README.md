@@ -40,21 +40,13 @@ This project demonstrates a **zero-trust authentication architecture** using:
 
 ```bash
 # Start Vault, Kong, and HTTPBin
-docker compose -f docker-compose-with-vault.yml up -d
+docker compose up -d
 
 # Check if services are healthy
-docker compose -f docker-compose-with-vault.yml ps
+docker compose ps
 ```
 
-### 2. Add Host Entry
-
-Add this line to your `/etc/hosts` file:
-
-```text
-127.0.0.1 vault.local
-```
-
-### 3. Configure the Complete System
+### 2. Configure the Complete System
 
 ```bash
 # Make the setup script executable
@@ -67,7 +59,7 @@ chmod +x setup-vault-identity-interactive.sh
 AUTO_PLAY_MODE=1 ./setup-vault-identity-interactive.sh
 ```
 
-### 4. Run the Interactive Demo
+### 3. Run the Interactive Demo
 
 ```bash
 # Interactive demonstration of the complete flow
@@ -98,7 +90,7 @@ AUTO_PLAY_MODE=1 ./vault-identity-demo-interactive.sh
 
 ### ✅ **SPIFFE-Compliant Identity**
 
-- Audience claim validation (`spiff://kong-api-gateway`)
+- Audience claim validation (`spiffe://kong-api-gateway`)
 - Workload identity with department and role metadata
 - Zero shared secrets between services
 
@@ -137,7 +129,7 @@ JWT_TOKEN=$(vault read -field=token identity/oidc/token/human-identity)
 
 ```bash
 # Make authenticated request
-curl -H "Host: vault.local" \
+curl -H "Host: localhost" \
      -H "Authorization: Bearer $JWT_TOKEN" \
      http://localhost:8000/api/get
 ```
@@ -148,11 +140,11 @@ The JWT tokens issued by Vault contain:
 
 ```json
 {
-  "aud": "spiff://kong-api-gateway",
+  "aud": "spiffe://kong-api-gateway",
   "azp": "spiffe://vault/engineering/developer/demo-developer",
   "exp": 1754228088,
   "iat": 1754224488,
-  "iss": "http://vault.local:8200/v1/identity/oidc",
+  "iss": "http://localhost:8200/v1/identity/oidc",
   "namespace": "root",
   "sub": "f388b783-8dec-031e-c344-6aaa18012c77",
   "userinfo": {
@@ -184,7 +176,7 @@ vault write identity/entity \
 vault write identity/oidc/role/human-identity \
   key="human-signer-key" \
   ttl="1h" \
-  client_id="spiff://kong-api-gateway" \
+  client_id="spiffe://kong-api-gateway" \
   template=@identity.tmpl
 ```
 
@@ -198,7 +190,7 @@ curl -X POST http://localhost:8001/services/ \
 
 # Create route
 curl -X POST http://localhost:8001/services/demo-service/routes \
-  --data "hosts[]=vault.local" \
+  --data "hosts[]=localhost" \
   --data "paths[]=/api"
 ```
 
@@ -212,7 +204,7 @@ curl -X POST http://localhost:8001/consumers/ \
 # Add JWT credential with Vault's public key
 curl -X POST http://localhost:8001/consumers/vault-signed-identity/jwt \
   --data "algorithm=RS256" \
-  --data "key=http://vault.local:8200/v1/identity/oidc" \
+  --data "key=http://localhost:8200/v1/identity/oidc" \
   --data-urlencode "rsa_public_key@vault-public.pem"
 ```
 
@@ -226,7 +218,7 @@ curl -X POST http://localhost:8001/consumers/vault-signed-identity/jwt \
 ## File Structure
 
 ```text
-├── docker-compose-with-vault.yml   # Complete stack with Vault
+├── docker-compose.yml              # Complete stack with Vault
 ├── setup-vault-identity-interactive.sh  # System setup script
 ├── vault-identity-demo-interactive.sh   # Demo script
 ├── identity.tmpl                   # Vault JWT template
@@ -251,10 +243,10 @@ curl http://localhost:8200/v1/sys/health
 
 ```bash
 # Kong logs
-docker compose -f docker-compose-with-vault.yml logs kong-gateway
+docker compose logs kong-gateway
 
 # Vault logs
-docker compose -f docker-compose-with-vault.yml logs vault-server
+docker compose logs vault-server
 ```
 
 ### Test JWT Token Decoding
@@ -267,10 +259,10 @@ echo "$JWT_TOKEN" | python3 decode-jwt.py
 
 ```bash
 # Stop all services
-docker compose -f docker-compose-with-vault.yml down
+docker compose down
 
 # Remove volumes (deletes databases)
-docker compose -f docker-compose-with-vault.yml down -v
+docker compose down -v
 ```
 
 ## Production Considerations

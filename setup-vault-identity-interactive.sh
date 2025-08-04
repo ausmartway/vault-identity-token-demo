@@ -52,7 +52,7 @@ export VAULT_ADDR='http://localhost:8200'
 export VAULT_TOKEN='myroot'
 
 p "# Configure OIDC issuer - this is crucial for JWT validation"
-pe "vault write identity/oidc/config issuer=\"http://vault.local:8200\""
+pe "vault write identity/oidc/config issuer=\"http://localhost:8200\""
 
 echo ""
 echo -e "${INFO_COLOR}🔐 Creating Vault entities and authentication...${COLOR_RESET}"
@@ -112,14 +112,14 @@ p "# Create a named key for signing identity tokens, the key auto auto-rotates e
 pe "vault write identity/oidc/key/human-signer-key algorithm=\"RS256\" verification_ttl=\"24h\" rotation_period=\"24h\""
 
 p "# Create a role with custom SPIFFE-compliant audience, signed jwt token is valid for 1 hour"
-vault write identity/oidc/role/human-identity key="human-signer-key" ttl="1h" client_id="spiff://kong-api-gateway" template=@identity.tmpl
+vault write identity/oidc/role/human-identity key="human-signer-key" ttl="1h" client_id="spiffe://kong-api-gateway" template=@identity.tmpl
 
 p "# Configure the key to allow our custom audience"
-pe "vault write identity/oidc/key/human-signer-key allowed_client_ids=\"spiff://kong-api-gateway\""
+pe "vault write identity/oidc/key/human-signer-key allowed_client_ids=\"spiffe://kong-api-gateway\""
 
 p "# Create policy for token generation"
 pe 'echo "path \"identity/oidc/token/human-identity\" {
-  capabilities = [\"read\", \"create\", \"update\"]
+  capabilities = [\"read\"]
 }" | vault policy write demo-token-policy -'
 
 p "# Attach the policy to our entity using the correct API"
@@ -149,7 +149,7 @@ pe "curl -i -X POST http://localhost:8001/services/ --data \"name=demo-service\"
 p "Created Kong service"
 
 p "# Create route for our API"
-pe "curl -i -X POST http://localhost:8001/services/demo-service/routes --data \"hosts[]=vault.local\" --data \"paths[]=/api\" > /dev/null"
+pe "curl -i -X POST http://localhost:8001/services/demo-service/routes --data \"hosts[]=localhost\" --data \"paths[]=/api\" > /dev/null"
 p "Created Kong route"
 
 p "# Create consumer for Vault tokens"
@@ -161,7 +161,7 @@ echo -e "${INFO_COLOR}🔐 Adding Vault's public key to Kong for JWT validation.
 echo ""
 
 p "# Add JWT credential with Vault's public key"
-pe "curl -i -X POST http://localhost:8001/consumers/vault-signed-identity/jwt --data \"algorithm=RS256\" --data \"key=http://vault.local:8200/v1/identity/oidc\" --data-urlencode \"rsa_public_key@vault-public.pem\" > /dev/null"
+pe "curl -i -X POST http://localhost:8001/consumers/vault-signed-identity/jwt --data \"algorithm=RS256\" --data \"key=http://localhost:8200/v1/identity/oidc\" --data-urlencode \"rsa_public_key@vault-public.pem\" > /dev/null"
 
 p "# Ensure the public key is synchronized (handles key rotation)"
 pe "KONG_JWT_ID=\$(curl -s http://localhost:8001/consumers/vault-signed-identity/jwt | jq -r '.data[0].id')"
@@ -191,11 +191,9 @@ echo -e "  ${INFO_COLOR}• API Gateway: http://localhost:8000${COLOR_RESET}"
 echo ""
 echo -e "${BOLD}${SUCCESS_COLOR}🛡️ Security Features Configured:${COLOR_RESET}"
 echo -e "  ${SUCCESS_COLOR}✅ JWT signature validation with Vault's public key${COLOR_RESET}"
-echo -e "  ${SUCCESS_COLOR}✅ Audience claim validation (spiff://kong-api-gateway)${COLOR_RESET}"
+echo -e "  ${SUCCESS_COLOR}✅ Audience claim validation (spiffe://kong-api-gateway)${COLOR_RESET}"
 echo -e "  ${SUCCESS_COLOR}✅ Department-based access control (engineering/security/devops)${COLOR_RESET}"
-echo -e "  ${SUCCESS_COLOR}✅ User context headers (X-User-Department, X-User-Role, etc.)${COLOR_RESET}"
 echo ""
 echo -e "${BOLD}${BLUE}📋 Next Steps:${COLOR_RESET}"
-echo -e "  1. Add 'vault.local' to your /etc/hosts: ${INFO_COLOR}127.0.0.1 vault.local${COLOR_RESET}"
-echo -e "  2. Run the interactive demo: ${INFO_COLOR}./vault-identity-demo-interactive.sh${COLOR_RESET}"
+echo -e "  1. Run the interactive demo: ${INFO_COLOR}./vault-identity-demo-interactive.sh${COLOR_RESET}"
 echo ""

@@ -104,7 +104,7 @@ pe "RESPONSE_NO_TOKEN=\$(curl -s -w \"\\nHTTP_STATUS:%{http_code}\" -H \"Host: v
 
 pe "STATUS_NO_TOKEN=\$(echo \"\$RESPONSE_NO_TOKEN\" | grep \"HTTP_STATUS:\" | cut -d: -f2)"
 
-if [ "$STATUS_NO_TOKEN" = "401" ]; then echo "${SUCCESS_COLOR}✅ Correctly rejected request without token (401)${COLOR_RESET}"; else echo "${ERROR_COLOR}❌ Unexpected response without token: $STATUS_NO_TOKEN${COLOR_RESET}"; fi
+if [ "$STATUS_NO_TOKEN" = "401" ]; then echo -e "${SUCCESS_COLOR}✅ Correctly rejected request without token (401)${COLOR_RESET}"; else echo "${ERROR_COLOR}❌ Unexpected response without token: $STATUS_NO_TOKEN${COLOR_RESET}"; fi
 
 echo ""
 echo -e "${BOLD}${KONG_COLOR}🚀 Step 4: Testing API with Vault Identity Token${COLOR_RESET}"
@@ -190,6 +190,15 @@ fi
 
 echo -e "${SUCCESS_COLOR}✅ Sales user obtained identity token${COLOR_RESET}"
 echo "Sales identity token: ${SALES_IDENTITY_TOKEN:0:50}..."
+
+echo ""
+echo -e "${INFO_COLOR}🔍 Let's decode the sales user token to see the department claim:${COLOR_RESET}"
+echo ""
+
+p "# Decode sales user JWT payload to see department difference"
+pe "echo \"\$SALES_IDENTITY_TOKEN\" | python3 decode-jwt.py 2>/dev/null || echo \"Could not decode sales token payload\""
+
+echo ""
 
 p "# Test API access with sales token - should be BLOCKED"
 pe "SALES_RESPONSE=\$(curl -s -w \"\\nHTTP_STATUS:%{http_code}\" -H \"Host: vault.local\" -H \"Authorization: Bearer \$SALES_IDENTITY_TOKEN\" http://localhost:8000/api/get)"

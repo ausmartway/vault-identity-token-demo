@@ -104,6 +104,7 @@ pe "RESPONSE_NO_TOKEN=\$(curl -s -w \"\\nHTTP_STATUS:%{http_code}\" -H \"Host: l
 
 pe "STATUS_NO_TOKEN=\$(echo \"\$RESPONSE_NO_TOKEN\" | grep \"HTTP_STATUS:\" | cut -d: -f2)"
 
+echo "Response status: $STATUS_NO_TOKEN"
 if [ "$STATUS_NO_TOKEN" = "401" ]; then echo -e "${SUCCESS_COLOR}✅ Correctly rejected request without token (401)${COLOR_RESET}"; else echo "${ERROR_COLOR}❌ Unexpected response without token: $STATUS_NO_TOKEN${COLOR_RESET}"; fi
 
 echo ""

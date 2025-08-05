@@ -215,18 +215,6 @@ curl -X POST http://localhost:8001/consumers/vault-signed-identity/jwt \
 | demodeveloper | password123 | engineering | developer |
 | demosales | password123 | sales | manager |
 
-## File Structure
-
-```text
-├── docker-compose.yml              # Complete stack with Vault
-├── setup-vault-identity-interactive.sh  # System setup script
-├── vault-identity-demo-interactive.sh   # Demo script
-├── identity.tmpl                   # Vault JWT template
-├── convert-jwk-to-pem.py          # JWK to PEM converter
-├── decode-jwt.py                  # JWT token decoder
-└── demo-magic.sh                  # Interactive demo effects
-```
-
 ## Troubleshooting
 
 ### Check Service Health
